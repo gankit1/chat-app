@@ -17,7 +17,7 @@ A real-time chat application built with React, Node.js, Express, and Socket.io.
 
 ### 1️⃣ Clone the Repository
 ```sh
-git clone https://github.com/your-username/chat-room.git
+git clone https://github.com/gankit1/chat-room.git
 cd chat-room
 ```
 
