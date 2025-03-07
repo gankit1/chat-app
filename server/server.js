@@ -5,24 +5,22 @@ const cors = require("cors");
 
 const { addUser, removeUser, getUser, getUsersInRoom } = require("./users");
 
+const router = require("./router");
+
 const app = express();
 const server = http.createServer(app);
 const io = socketio(server, {
   cors: {
-    origin: "*",
+    origin: "*", // Allow all origins (adjust for security in production)
     methods: ["GET", "POST"],
   },
 });
 
 app.use(cors());
-
-// API route for testing
-app.get("/", (req, res) => {
-  res.send("Chat server is running!");
-});
+app.use(router);
 
 io.on("connection", (socket) => {
-  console.log("New connection");
+  console.log("New connection established!");
 
   socket.on("join", ({ name, room }, callback) => {
     const { error, user } = addUser({ id: socket.id, name, room });
@@ -31,14 +29,18 @@ io.on("connection", (socket) => {
 
     socket.join(user.room);
 
+    // Welcome current user
     socket.emit("message", {
       user: "admin",
       text: `${user.name}, welcome to room ${user.room}.`,
     });
+
+    // Notify others in the room
     socket.broadcast
       .to(user.room)
       .emit("message", { user: "admin", text: `${user.name} has joined!` });
 
+    // Send updated room data
     io.to(user.room).emit("roomData", {
       room: user.room,
       users: getUsersInRoom(user.room),
@@ -49,17 +51,20 @@ io.on("connection", (socket) => {
 
   socket.on("sendMessage", (message, callback) => {
     const user = getUser(socket.id);
+
     if (user) {
       io.to(user.room).emit("message", { user: user.name, text: message });
     }
+
     callback();
   });
 
   socket.on("disconnect", () => {
     const user = removeUser(socket.id);
+
     if (user) {
       io.to(user.room).emit("message", {
-        user: "Admin",
+        user: "admin",
         text: `${user.name} has left.`,
       });
       io.to(user.room).emit("roomData", {
@@ -67,10 +72,10 @@ io.on("connection", (socket) => {
         users: getUsersInRoom(user.room),
       });
     }
-    console.log("User disconnected");
+
+    console.log("User had left!");
   });
 });
 
-server.listen(process.env.PORT || 5000, () =>
-  console.log(`Server running on port ${process.env.PORT || 5000}`)
-);
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
